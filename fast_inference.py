@@ -20,6 +20,7 @@ def run_fast_inference(ligand_smiles: str, protein_sequence: str, config_path: s
     Minimal inference function for a single protein-ligand pair, requiring only ligand SMILES and protein sequence.
     All other parameters are loaded from a YAML config file.
     """
+    print("Loading configuration...")
     # Load config
     with open(config_path) as f:
         config = yaml.safe_load(f)
@@ -51,18 +52,24 @@ def run_fast_inference(ligand_smiles: str, protein_sequence: str, config_path: s
     old_score_model = config.get('old_score_model', False)
     old_confidence_model = config.get('old_confidence_model', True)
 
+    print("Creating output directory...")
     os.makedirs(out_dir, exist_ok=True)
+    print(f"Loading score model parameters from {os.path.join(model_dir, 'model_parameters.yml')}")
     with open(os.path.join(model_dir, 'model_parameters.yml')) as f:
         score_model_args = SimpleNamespace(**yaml.full_load(f))
     if confidence_model_dir is not None:
+        print(f"Loading confidence model parameters from {os.path.join(confidence_model_dir, 'model_parameters.yml')}")
         with open(os.path.join(confidence_model_dir, 'model_parameters.yml')) as f:
             confidence_args = SimpleNamespace(**yaml.full_load(f))
     else:
         confidence_args = None
 
+    print("Setting up device...")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
 
     # Prepare dataset for a single complex
+    print("Preparing dataset for the complex...")
     complex_name_list = [complex_name]
     protein_path_list = [None]  # Not used
     protein_sequence_list = [protein_sequence]
@@ -71,6 +78,7 @@ def run_fast_inference(ligand_smiles: str, protein_sequence: str, config_path: s
         write_dir = os.path.join(out_dir, name)
         os.makedirs(write_dir, exist_ok=True)
 
+    print("Creating InferenceDataset...")
     test_dataset = InferenceDataset(
         out_dir=out_dir,
         complex_names=complex_name_list,
@@ -88,6 +96,7 @@ def run_fast_inference(ligand_smiles: str, protein_sequence: str, config_path: s
     )
     test_loader = DataLoader(dataset=test_dataset, batch_size=1, shuffle=False)
 
+    print("Loading score model checkpoint...")
     t_to_sigma = lambda t: t_to_sigma_compl(t, args=score_model_args)
     model = get_model(score_model_args, device, t_to_sigma=t_to_sigma, no_parallel=True, old=old_score_model)
     state_dict = torch.load(os.path.join(model_dir, ckpt), map_location='cpu')
@@ -96,6 +105,7 @@ def run_fast_inference(ligand_smiles: str, protein_sequence: str, config_path: s
     model.eval()
 
     if confidence_model_dir is not None:
+        print("Loading confidence model checkpoint...")
         confidence_model = get_model(confidence_args, device, t_to_sigma=t_to_sigma, no_parallel=True, confidence_mode=True, old=old_confidence_model)
         state_dict = torch.load(os.path.join(confidence_model_dir, confidence_ckpt), map_location='cpu')
         confidence_model.load_state_dict(state_dict, strict=True)
@@ -104,13 +114,18 @@ def run_fast_inference(ligand_smiles: str, protein_sequence: str, config_path: s
     else:
         confidence_model = None
 
+    print("Preparing diffusion schedule...")
     tr_schedule = get_t_schedule(inference_steps=inference_steps, sigma_schedule='expbeta')
     N = samples_per_complex
 
+    print("Starting inference loop...")
     for idx, orig_complex_graph in enumerate(test_loader):
+        print(f"Processing complex {idx+1}/{len(complex_name_list)}: {complex_name_list[idx]}")
         if not orig_complex_graph.success[0]:
+            print("  Skipping: complex graph not successful.")
             continue
         if confidence_model is not None and confidence_args is not None and not confidence_args.use_original_model_cache:
+            print("  Preparing confidence dataset...")
             confidence_complex_graph = InferenceDataset(
                 out_dir=out_dir,
                 complex_names=complex_name_list,
@@ -131,6 +146,7 @@ def run_fast_inference(ligand_smiles: str, protein_sequence: str, config_path: s
         else:
             confidence_data_list = None
         data_list = [copy.deepcopy(orig_complex_graph) for _ in range(N)]
+        print("  Randomizing ligand positions...")
         randomize_position(
             data_list,
             score_model_args.no_torsion,
@@ -141,6 +157,7 @@ def run_fast_inference(ligand_smiles: str, protein_sequence: str, config_path: s
         )
         lig = orig_complex_graph.mol[0]
         visualization_list = None  # Minimal version skips visualisation
+        print("  Running diffusion sampling...")
         data_list, confidence = sampling(
             data_list=data_list,
             model=model,
@@ -161,6 +178,7 @@ def run_fast_inference(ligand_smiles: str, protein_sequence: str, config_path: s
             temp_psi=[temp_psi_tr, temp_psi_rot, temp_psi_tor],
             temp_sigma_data=[temp_sigma_data_tr, temp_sigma_data_rot, temp_sigma_data_tor]
         )
+        print("  Collecting ligand positions...")
         ligand_pos = np.asarray([
             complex_graph['ligand'].pos.cpu().numpy() + orig_complex_graph.original_center.cpu().numpy()
             for complex_graph in data_list
@@ -173,9 +191,11 @@ def run_fast_inference(ligand_smiles: str, protein_sequence: str, config_path: s
             confidence = confidence[re_order]
             ligand_pos = ligand_pos[re_order]
         write_dir = os.path.join(out_dir, complex_name_list[idx])
+        print(f"  Writing SDF files to {write_dir} ...")
         for rank, pos in enumerate(ligand_pos):
             mol_pred = copy.deepcopy(lig)
             if score_model_args.remove_hs:
                 mol_pred = RemoveAllHs(mol_pred)
             write_mol_with_coords(mol_pred, pos, os.path.join(write_dir, f'rank{rank+1}.sdf'))
+        print("  Inference for this complex complete.")
         return ligand_pos, confidence  # Return results for further use in scripts
