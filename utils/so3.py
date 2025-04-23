@@ -42,12 +42,18 @@ def _score(exp, omega, eps, L=2000):  # score of density over SO(3)
     return dSigma / exp
 
 
+print("Loading SO(3) precomputed data...")
 if os.path.exists('.so3_omegas_array4.npy'):
     _omegas_array = np.load('.so3_omegas_array4.npy')
     _cdf_vals = np.load('.so3_cdf_vals4.npy')
     _score_norms = np.load('.so3_score_norms4.npy')
     _exp_score_norms = np.load('.so3_exp_score_norms4.npy')
+
+    print("SO(3) precomputed data loaded successfully.")    
+
+
 else:
+    print("SO(3) precomputed data not found, computing...")
     _eps_array = 10 ** np.linspace(np.log10(MIN_EPS), np.log10(MAX_EPS), N_EPS)
     _omegas_array = np.linspace(0, np.pi, X_N + 1)[1:]
 
