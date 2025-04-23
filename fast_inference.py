@@ -15,39 +15,42 @@ from utils.sampling import randomize_position, sampling
 from utils.utils import get_model
 
 
-def run_fast_inference(
-    model_dir,
-    ckpt,
-    protein_path=None,
-    protein_sequence=None,
-    ligand_description=None,
-    out_dir='results/user_inference',
-    complex_name='complex_0',
-    samples_per_complex=10,
-    batch_size=10,
-    inference_steps=20,
-    actual_steps=None,
-    no_final_step_noise=True,
-    initial_noise_std_proportion=-1.0,
-    choose_residue=False,
-    save_visualisation=False,
-    confidence_model_dir=None,
-    confidence_ckpt='best_model.pt',
-    temp_sampling_tr=1.0,
-    temp_psi_tr=0.0,
-    temp_sigma_data_tr=0.5,
-    temp_sampling_rot=1.0,
-    temp_psi_rot=0.0,
-    temp_sigma_data_rot=0.5,
-    temp_sampling_tor=1.0,
-    temp_psi_tor=0.0,
-    temp_sigma_data_tor=0.5,
-    old_score_model=False,
-    old_confidence_model=True,
-):
+def run_fast_inference(ligand_smiles: str, protein_sequence: str, config_path: str = 'default_inference_args.yaml'):
     """
-    Minimal inference function for a single protein-ligand pair.
+    Minimal inference function for a single protein-ligand pair, requiring only ligand SMILES and protein sequence.
+    All other parameters are loaded from a YAML config file.
     """
+    # Load config
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+
+    # Set up all parameters from config
+    model_dir = config['model_dir']
+    ckpt = config['ckpt']
+    out_dir = config.get('out_dir', 'results/user_inference')
+    complex_name = config.get('complex_name', 'complex_0')
+    samples_per_complex = config.get('samples_per_complex', 10)
+    batch_size = config.get('batch_size', 10)
+    inference_steps = config.get('inference_steps', 20)
+    actual_steps = config.get('actual_steps', None)
+    no_final_step_noise = config.get('no_final_step_noise', True)
+    initial_noise_std_proportion = config.get('initial_noise_std_proportion', -1.0)
+    choose_residue = config.get('choose_residue', False)
+    save_visualisation = config.get('save_visualisation', False)
+    confidence_model_dir = config.get('confidence_model_dir', None)
+    confidence_ckpt = config.get('confidence_ckpt', 'best_model.pt')
+    temp_sampling_tr = config.get('temp_sampling_tr', 1.0)
+    temp_psi_tr = config.get('temp_psi_tr', 0.0)
+    temp_sigma_data_tr = config.get('temp_sigma_data_tr', 0.5)
+    temp_sampling_rot = config.get('temp_sampling_rot', 1.0)
+    temp_psi_rot = config.get('temp_psi_rot', 0.0)
+    temp_sigma_data_rot = config.get('temp_sigma_data_rot', 0.5)
+    temp_sampling_tor = config.get('temp_sampling_tor', 1.0)
+    temp_psi_tor = config.get('temp_psi_tor', 0.0)
+    temp_sigma_data_tor = config.get('temp_sigma_data_tor', 0.5)
+    old_score_model = config.get('old_score_model', False)
+    old_confidence_model = config.get('old_confidence_model', True)
+
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(model_dir, 'model_parameters.yml')) as f:
         score_model_args = SimpleNamespace(**yaml.full_load(f))
@@ -61,9 +64,9 @@ def run_fast_inference(
 
     # Prepare dataset for a single complex
     complex_name_list = [complex_name]
-    protein_path_list = [protein_path]
+    protein_path_list = [None]  # Not used
     protein_sequence_list = [protein_sequence]
-    ligand_description_list = [ligand_description]
+    ligand_description_list = [ligand_smiles]
     for name in complex_name_list:
         write_dir = os.path.join(out_dir, name)
         os.makedirs(write_dir, exist_ok=True)
