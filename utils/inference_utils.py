@@ -134,6 +134,7 @@ class InferenceDataset(Dataset):
         self.protein_sequences = protein_sequences
 
         # generate LM embeddings
+        print("(in InferenceDataset) Generating LM embeddings")
         if lm_embeddings and (precomputed_lm_embeddings is None or precomputed_lm_embeddings[0] is None):
             print("Generating ESM language model embeddings")
             model_location = "esm2_t33_650M_UR50D"
@@ -142,13 +143,17 @@ class InferenceDataset(Dataset):
             if torch.cuda.is_available():
                 model = model.cuda()
 
+            print("(in InferenceDataset) Getting sequences from protein files")
             protein_sequences = get_sequences(protein_files, protein_sequences)
             labels, sequences = [], []
             for i in range(len(protein_sequences)):
+                print(f"Processing protein sequence {i+1} of {len(protein_sequences)}")
                 s = protein_sequences[i].split(':')
+                print(f"Splitting protein sequence {i+1} into {len(s)} chains")
                 sequences.extend(s)
                 labels.extend([complex_names[i] + '_chain_' + str(j) for j in range(len(s))])
 
+            print("(in InferenceDataset) Computing ESM embeddings")
             lm_embeddings = compute_ESM_embeddings(model, alphabet, labels, sequences)
 
             self.lm_embeddings = []

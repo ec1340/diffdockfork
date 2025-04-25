@@ -1,12 +1,12 @@
 import copy
 import random
-
 import numpy as np
 import torch
 from torch_geometric.data import Batch
 from torch_geometric.loader import DataLoader
 
 from utils.diffusion_utils import modify_conformer, set_time, modify_conformer_batch
+
 from utils.torsion import modify_conformer_torsion_angles
 from scipy.spatial.transform import Rotation as R
 from utils.utils import crop_beyond

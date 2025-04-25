@@ -8,8 +8,10 @@ from types import SimpleNamespace
 from torch_geometric.loader import DataLoader
 from rdkit.Chem import RemoveAllHs
 
-from datasets.process_mols import write_mol_with_coords
-from utils.diffusion_utils import t_to_sigma as t_to_sigma_compl, get_t_schedule
+
+from datasets.process_mols import write_mol_with_coords # fine?
+
+from utils.diffusion_utils import t_to_sigma as t_to_sigma_compl, get_t_schedule # fine?
 from utils.inference_utils import InferenceDataset
 from utils.sampling import randomize_position, sampling
 from utils.utils import get_model
@@ -26,7 +28,7 @@ def run_fast_inference(ligand_smiles: str, protein_sequence: str, config_path: s
         config = yaml.safe_load(f)
 
     # Set up all parameters from config
-    model_dir = config['model_dir']
+    model_dir = config['model_dir'] # ./workdir/v1.1/score_model
     ckpt = config['ckpt']
     out_dir = config.get('out_dir', 'results/user_inference')
     complex_name = config.get('complex_name', 'complex_0')
@@ -75,7 +77,10 @@ def run_fast_inference(ligand_smiles: str, protein_sequence: str, config_path: s
     protein_sequence_list = [protein_sequence]
     ligand_description_list = [ligand_smiles]
     for name in complex_name_list:
+
+        print(f"Preparing dataset for the complex: {name}")
         write_dir = os.path.join(out_dir, name)
+        print(f"Creating output directory: {write_dir}")
         os.makedirs(write_dir, exist_ok=True)
 
     print("Creating InferenceDataset...")
