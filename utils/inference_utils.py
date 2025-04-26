@@ -141,10 +141,12 @@ class InferenceDataset(Dataset):
             model, alphabet = pretrained.load_model_and_alphabet(model_location)
             model.eval()
             if torch.cuda.is_available():
+                print("(in InferenceDataset) Moving model to GPU")
                 model = model.cuda()
 
             print("(in InferenceDataset) Getting sequences from protein files")
             protein_sequences = get_sequences(protein_files, protein_sequences)
+            print(f'\nprotein_sequences: {protein_sequences}\n')
             labels, sequences = [], []
             for i in range(len(protein_sequences)):
                 print(f"Processing protein sequence {i+1} of {len(protein_sequences)}")
@@ -154,11 +156,21 @@ class InferenceDataset(Dataset):
                 labels.extend([complex_names[i] + '_chain_' + str(j) for j in range(len(s))])
 
             print("(in InferenceDataset) Computing ESM embeddings")
-            lm_embeddings = compute_ESM_embeddings(model, alphabet, labels, sequences)
+            print(f'\nlabels: {labels}\n')
+            print(f'\nsequences: {sequences}\n')
+            print(f'\nalphabet: {alphabet}\n')
+            print(f'\nmodel: {model}\n')
+            lm_embeddings = compute_ESM_embeddings(model,
+                                                alphabet,
+                                                    labels,
+                                                    sequences)
 
             self.lm_embeddings = []
             for i in range(len(protein_sequences)):
+                print(f"Processing protein sequence {i+1} of {len(protein_sequences)}")
                 s = protein_sequences[i].split(':')
+                print(f"Splitting protein sequence {i+1} into {len(s)} chains")
+                print(f'\nsequences: {s}\n')
                 self.lm_embeddings.append([lm_embeddings[f'{complex_names[i]}_chain_{j}'] for j in range(len(s))])
 
         elif not lm_embeddings:
