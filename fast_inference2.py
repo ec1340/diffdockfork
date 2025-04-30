@@ -14,7 +14,7 @@ from utils.inference_utils import InferenceDataset
 from utils.sampling import randomize_position, sampling
 from utils.utils import get_model
 from utils.pdb_utils import coordinates_to_pdb
-
+from functools import partial
 def run_fast_inference_with_protein_file(ligand_smiles: str,
                                        pdb_string: str,
                                        config_path: str = 'default_inference_args.yaml'):
@@ -129,7 +129,9 @@ def run_fast_inference_with_protein_file(ligand_smiles: str,
     test_loader = DataLoader(dataset=test_dataset, batch_size=1, shuffle=False)
 
     print("Loading score model checkpoint...")
-    t_to_sigma = lambda t: t_to_sigma_compl(t, args=score_model_args)
+    t_to_sigma = partial(t_to_sigma_compl, args=score_model_args)
+
+    # t_to_sigma = lambda t: t_to_sigma_compl(t, args=score_model_args)
 
     print(f'\n\nt_to_sigma: {t_to_sigma}\n\n')
     model = get_model(score_model_args, device, t_to_sigma=t_to_sigma, no_parallel=True, old=old_score_model)
