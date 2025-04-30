@@ -42,6 +42,8 @@ def run_fast_inference_with_protein_file(ligand_smiles: str,
     with open(pdb_file_path, "w") as f:
         f.write(pdb_string)
 
+    print(f"\n\nProtein PDB file written to {pdb_file_path}\n\n")
+
 
     # Set up all parameters from config
     model_dir = config['model_dir']
