@@ -77,10 +77,12 @@ def run_fast_inference_with_protein_file(ligand_smiles: str,
     print(f"Loading score model parameters from {os.path.join(model_dir, 'model_parameters.yml')}")
     with open(os.path.join(model_dir, 'model_parameters.yml')) as f:
         score_model_args = SimpleNamespace(**yaml.full_load(f))
+        print(f'\n\nscore_model_args: {score_model_args}\n\n')
     if confidence_model_dir is not None:
         print(f"Loading confidence model parameters from {os.path.join(confidence_model_dir, 'model_parameters.yml')}")
         with open(os.path.join(confidence_model_dir, 'model_parameters.yml')) as f:
             confidence_args = SimpleNamespace(**yaml.full_load(f))
+            print(f'\n\nconfidence_args: {confidence_args}\n\n')
     else:
         confidence_args = None
 
@@ -128,6 +130,8 @@ def run_fast_inference_with_protein_file(ligand_smiles: str,
 
     print("Loading score model checkpoint...")
     t_to_sigma = lambda t: t_to_sigma_compl(t, args=score_model_args)
+
+    print(f'\n\nt_to_sigma: {t_to_sigma}\n\n')
     model = get_model(score_model_args, device, t_to_sigma=t_to_sigma, no_parallel=True, old=old_score_model)
     state_dict = torch.load(os.path.join(model_dir, ckpt), map_location='cpu')
     model.load_state_dict(state_dict, strict=True)
