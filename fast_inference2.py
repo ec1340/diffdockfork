@@ -4,9 +4,11 @@ import torch
 import numpy as np
 import yaml
 from types import SimpleNamespace
+from argparse import ArgumentParser, Namespace, FileType
 
 from torch_geometric.loader import DataLoader
 from rdkit.Chem import RemoveAllHs
+
 
 from datasets.process_mols import write_mol_with_coords
 from utils.diffusion_utils import t_to_sigma as t_to_sigma_compl, get_t_schedule
@@ -15,6 +17,8 @@ from utils.sampling import randomize_position, sampling
 from utils.utils import get_model
 from utils.pdb_utils import coordinates_to_pdb
 from functools import partial
+
+
 def run_fast_inference_with_protein_file(ligand_smiles: str,
                                        pdb_string: str,
                                        config_path: str = 'default_inference_args.yaml'):
@@ -76,12 +80,12 @@ def run_fast_inference_with_protein_file(ligand_smiles: str,
     os.makedirs(out_dir, exist_ok=True)
     print(f"Loading score model parameters from {os.path.join(model_dir, 'model_parameters.yml')}")
     with open(os.path.join(model_dir, 'model_parameters.yml')) as f:
-        score_model_args = SimpleNamespace(**yaml.full_load(f))
+        score_model_args = Namespace(**yaml.full_load(f))
         print(f'\n\nscore_model_args: {score_model_args}\n\n')
     if confidence_model_dir is not None:
         print(f"Loading confidence model parameters from {os.path.join(confidence_model_dir, 'model_parameters.yml')}")
         with open(os.path.join(confidence_model_dir, 'model_parameters.yml')) as f:
-            confidence_args = SimpleNamespace(**yaml.full_load(f))
+            confidence_args = Namespace(**yaml.full_load(f))
             print(f'\n\nconfidence_args: {confidence_args}\n\n')
     else:
         confidence_args = None
