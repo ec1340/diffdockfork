@@ -232,10 +232,21 @@ def run_fast_inference_with_protein_file(ligand_smiles: str,
             ligand_pos = ligand_pos[re_order]
         write_dir = os.path.join(out_dir, complex_name_list[idx])
         print(f"  Writing SDF files to {write_dir} ...")
+
+        sdf_paths = []
         for rank, pos in enumerate(ligand_pos):
             mol_pred = copy.deepcopy(lig)
             if score_model_args.remove_hs:
                 mol_pred = RemoveAllHs(mol_pred)
-            write_mol_with_coords(mol_pred, pos, os.path.join(write_dir, f'rank{rank+1}.sdf'))
+            sdf_path = os.path.join(write_dir, f'rank{rank+1}.sdf')
+            write_mol_with_coords(mol_pred, pos, sdf_path)
+            sdf_paths.append(sdf_path)
+
+        # read sdf files
+        sdf_strings = []
+        for sdf_path in sdf_paths:
+            with open(sdf_path, 'r') as f:
+                sdf_strings.append(f.read())
+
         print("  Inference for this complex complete.")
-        return ligand_pos, confidence  # Return results for further use in scripts
+        return ligand_pos, confidence, sdf_strings  # Return results for further use in scripts
