@@ -170,8 +170,11 @@ def main(args):
         os.makedirs(write_dir, exist_ok=True)
 
     # preprocessing of complexes into geometric graphs
-    test_dataset = InferenceDataset(out_dir=args.out_dir, complex_names=complex_name_list, protein_files=protein_path_list,
-                                    ligand_descriptions=ligand_description_list, protein_sequences=protein_sequence_list,
+    test_dataset = InferenceDataset(out_dir=args.out_dir,
+                                    complex_names=complex_name_list,
+                                    protein_files=protein_path_list,
+                                    ligand_descriptions=ligand_description_list,
+                                    protein_sequences=protein_sequence_list,
                                     lm_embeddings=True,
                                     receptor_radius=score_model_args.receptor_radius, remove_hs=score_model_args.remove_hs,
                                     c_alpha_max_neighbors=score_model_args.c_alpha_max_neighbors,

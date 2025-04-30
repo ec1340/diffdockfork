@@ -8,29 +8,43 @@ from types import SimpleNamespace
 from torch_geometric.loader import DataLoader
 from rdkit.Chem import RemoveAllHs
 
-
-from datasets.process_mols import write_mol_with_coords # fine?
-
-from utils.diffusion_utils import t_to_sigma as t_to_sigma_compl, get_t_schedule # fine?
+from datasets.process_mols import write_mol_with_coords
+from utils.diffusion_utils import t_to_sigma as t_to_sigma_compl, get_t_schedule
 from utils.inference_utils import InferenceDataset
 from utils.sampling import randomize_position, sampling
 from utils.utils import get_model
+from utils.pdb_utils import coordinates_to_pdb
 
-
-def run_fast_inference(ligand_smiles: str,
-                        protein_sequence: str,
-                          config_path: str = 'default_inference_args.yaml'):
+def run_fast_inference_with_protein_file(ligand_smiles: str,
+                                       pdb_string: str,
+                                       config_path: str = 'default_inference_args.yaml'):
     """
-    Minimal inference function for a single protein-ligand pair, requiring only ligand SMILES and protein sequence.
+    Minimal inference function for a single protein-ligand pair, requiring a ligand SMILES and protein file path.
     All other parameters are loaded from a YAML config file.
+    
+    Args:
+        ligand_smiles (str): SMILES string of the ligand
+        protein_path (str): Path to the protein PDB file
+        config_path (str): Path to the YAML configuration file
+        
+    Returns:
+        tuple: (ligand_positions, confidence_scores) where:
+            - ligand_positions: numpy array of predicted ligand positions
+            - confidence_scores: numpy array of confidence scores for each prediction
     """
     print("Loading configuration...")
     # Load config
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
+    pdb_file_path = "tmp_protein_structure.pdb"
+    # write pdb file
+    with open(pdb_file_path, "w") as f:
+        f.write(pdb_string)
+
+
     # Set up all parameters from config
-    model_dir = config['model_dir'] # ./workdir/v1.1/score_model
+    model_dir = config['model_dir']
     ckpt = config['ckpt']
     out_dir = config.get('out_dir', 'results/user_inference')
     complex_name = config.get('complex_name', 'complex_0')
@@ -60,7 +74,7 @@ def run_fast_inference(ligand_smiles: str,
     os.makedirs(out_dir, exist_ok=True)
     print(f"Loading score model parameters from {os.path.join(model_dir, 'model_parameters.yml')}")
     with open(os.path.join(model_dir, 'model_parameters.yml')) as f:
-        score_model_wdargs = SimpleNamespace(**yaml.full_load(f))
+        score_model_args = SimpleNamespace(**yaml.full_load(f))
     if confidence_model_dir is not None:
         print(f"Loading confidence model parameters from {os.path.join(confidence_model_dir, 'model_parameters.yml')}")
         with open(os.path.join(confidence_model_dir, 'model_parameters.yml')) as f:
@@ -79,15 +93,14 @@ def run_fast_inference(ligand_smiles: str,
     complex_name_list = [complex_name]
 
     # protein
-    protein_path_list = [None]  # Not used
+    protein_path_list = [pdb_file_path]
 
-    # protein
-    protein_sequence_list = [protein_sequence]
+    # protein sequence is None since we're using a protein file
+    protein_sequence_list = [None]
 
     # ligand
     ligand_description_list = [ligand_smiles]
     for name in complex_name_list:
-
         print(f"Preparing dataset for the complex: {name}")
         write_dir = os.path.join(out_dir, name)
         print(f"Creating output directory: {write_dir}")
