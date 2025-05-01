@@ -248,5 +248,12 @@ def run_fast_inference_with_protein_file(ligand_smiles: str,
             with open(sdf_path, 'r') as f:
                 sdf_strings.append(f.read())
 
-        print("  Inference for this complex complete.")
-        return ligand_pos, confidence, sdf_strings  # Return results for further use in scripts
+        print(" Inference for this complex complete.")
+
+        output_dict = {
+            'ligand_pos': ligand_pos,
+            'confidence': confidence,
+            'sdf_strings': sdf_strings,
+            'sdf_paths': sdf_paths
+        }
+        return output_dict
