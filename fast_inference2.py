@@ -54,7 +54,7 @@ def run_fast_inference_with_protein_file(ligand_smiles: str,
     ckpt = config['ckpt']
     out_dir = config.get('out_dir', 'results/user_inference')
     complex_name = config.get('complex_name', 'complex_0')
-    samples_per_complex = config.get('samples_per_complex', 10)
+    samples_per_complex = config.get('samples_per_complex', 5)
     batch_size = config.get('batch_size', 10)
     inference_steps = config.get('inference_steps', 20)
     actual_steps = config.get('actual_steps', None)
